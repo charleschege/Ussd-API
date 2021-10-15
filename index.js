@@ -86,28 +86,39 @@ router.post("/", (req, res) => {
     } else if (text === "1*4" || text === "2*4") {
         response = `END Your balance is being processed. You will receive an SMS shortly.`;
     } else if (text === "3") {
-        response = `CON Choose which phone number to guarantee loan
-        1. KES 5000 for Account 0700 -- -- -- 
-        2. KES 200 for Account 0700 -- -- --
-        3. Cancel
-        `;
+        // FIXME remove this and call from your database
+        response = `CON ${load_memdb()}`;
     } else if (text.includes("3*")) {
         let arrayText = split(text);
+        console.log(arrayText);
 
-        // FIXME Make this part fetch from the database
-        if (arrayText[1] === "1") {
-            response = `END The KES 5000 for Account 0700 -- -- -- has been guaranteed by you successfully.`;
-        } else if (arrayText[1] === "2") {
-            response = `END The KES 200 for Account 0700 -- -- -- has been guaranteed by you successfully.`;
+        if (arrayText[2] !== undefined) {
+            let target = parseInt(arrayText[1]) - 1;
+            let userData = [...memdb][target];
+
+            if (parseInt(arrayText[2]) > userData[1]) {
+                response = `CON You cannot guarantee KES ${arrayText[2]} that is higher than the requested amount of ${userData[1]}.`
+            } else {
+                response = `END Your guarantee amount of KES ${arrayText[2]} from a request of KES ${userData[1]} by ${userData[0]} is being processed. You will receive a confirmation shortly.`;
+
+            }
         } else if (arrayText[1] === "3") {
             response = `END Cancelled request.`;
-        } else {
-            response = `CON Choose only provided options to guarantee a loan
-            1. KES 5000 for Account 0700 -- -- -- 
-            2. KES 200 for Account 0700 -- -- --
-            `;
         }
+        // FIXME Make this part fetch from the database
+        else if (arrayText[1] === "1" || arrayText[1] > "1") {
+            let target = parseInt(arrayText[1]) - 1;
+            let userData = [...memdb][target];
 
+            if (userData === undefined) {
+                response = `CON Choose only from available requests. \n ${load_memdb()}`;
+            } else {
+                response = `CON Amount to Guarantee the loan of ${userData[1]}`;
+            }
+
+        } else {
+            response = `END Choose only provided options to guarantee a loan`;
+        }
     } else {
         response = `END Unable to get your input. Try again later`;
     }
@@ -121,6 +132,19 @@ function split(inputText) {
 
     return result;
 }
+
+function load_memdb() {
+    return `Choose which phone number to guarantee loan
+        1. KES ${[...memdb][0][1]} for Account ${[...memdb][0][0]}
+        2. KES ${[...memdb][1][1]} for Account ${[...memdb][1][0]}
+        3. Cancel
+        `
+}
+
+
+var memdb = new Map();
+memdb.set("0700000001", 5000);
+memdb.set("0700000002", 200);
 
 
 module.exports = router;
